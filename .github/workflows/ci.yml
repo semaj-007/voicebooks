@@ -15,11 +15,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Set up Node.js
+      - name: Set up Node.js for backend
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
           cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
       
       - name: Lint backend
         working-directory: backend
@@ -29,10 +30,18 @@ jobs:
           # Add linting if configured
           echo "Backend linting passed"
       
+      - name: Set up Node.js for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
       - name: Lint frontend
         working-directory: frontend
         run: |
           npm ci
+          if [ ! -f package-lock.json ]; then exit 1; fi
           npm run lint || true  # Continue even if linting fails
 
   test:
@@ -43,11 +52,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Set up Node.js
+      - name: Set up Node.js for backend
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
           cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
       
       - name: Test backend
         working-directory: backend
@@ -55,6 +65,13 @@ jobs:
           npm ci
           if [ ! -f package-lock.json ]; then exit 1; fi
           npm run test:coverage
+      
+      - name: Set up Node.js for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
       
       - name: Test frontend
         working-directory: frontend
@@ -77,11 +94,13 @@ jobs:
         with:
           node-version: 24.x
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
       
       - name: Build frontend
         working-directory: frontend
         run: |
           npm ci
+          if [ ! -f package-lock.json ]; then exit 1; fi
           npm run build
       
       - name: Upload build artifacts
