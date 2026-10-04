@@ -15,6 +15,8 @@ export default defineConfig({
         'node_modules/',
         'src/setupTests.js'
       ]
-    }
+    },
+    // Don't hoist mocks to avoid issues with ES modules
+    isolate: false
   }
 });
