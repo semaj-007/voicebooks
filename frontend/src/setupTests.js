@@ -1,20 +1,11 @@
 // Vitest setup file
 import { expect } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
+import React from 'react';
+import { vi } from 'vitest';
 
 // Extend Vitest expect with jest-dom matchers
 expect.extend(matchers);
-
-// Mock the API client for tests
-vi.mock('./api/client.js', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn()
-  }
-}));
 
 // Mock localStorage
 const localStorageMock = (() => {

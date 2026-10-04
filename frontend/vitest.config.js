@@ -20,6 +20,11 @@ export default defineConfig({
       ]
     },
     // Don't hoist mocks to avoid issues with ES modules
-    isolate: false
+    isolate: false,
+    // Ensure React is available globally
+    environmentMatchGlobs: [
+      ['**/*.test.jsx', 'jsdom'],
+      ['**/*.test.js', 'jsdom']
+    ]
   }
 });
