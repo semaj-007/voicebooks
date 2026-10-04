@@ -1,83 +1,44 @@
-const request = require('supertest');
-const app = require('../../src/app.js');
-const { db } = require('../../src/db/index.js');
+// Mock all the dependencies before requiring app
+const mockAccounts = {
+  findRowByEmail: jest.fn(),
+  findRowById: jest.fn(),
+  toPublic: jest.fn(),
+  createUserWithBusiness: jest.fn(),
+  saveResetToken: jest.fn(),
+  findValidResetToken: jest.fn(),
+  consumeResetToken: jest.fn(),
+  recentResetTokenExists: jest.fn(),
+  setSageStatus: jest.fn(),
+  completeOnboarding: jest.fn(),
+  listUsers: jest.fn()
+};
 
-// Mock the database module
-jest.mock('../../src/db/index.js', () => {
-  const mockPrepare = jest.fn();
-  const mockDb = {
-    prepare: mockPrepare,
-    transaction: jest.fn()
-  };
-  
-  return { db: mockDb };
-});
+const mockSecurity = {
+  hashPassword: jest.fn().mockResolvedValue('hashed_password'),
+  verifyPassword: jest.fn().mockResolvedValue(true),
+  signToken: jest.fn().mockReturnValue('test_token'),
+  verifyToken: jest.fn(),
+  setAuthCookie: jest.fn(),
+  clearAuthCookie: jest.fn(),
+  newResetToken: jest.fn().mockReturnValue({ raw: 'a'.repeat(64), hash: 'hashed_token' }),
+  sha256: jest.fn().mockReturnValue('hashed_token'),
+  DUMMY_HASH: 'dummy_hash',
+  COOKIE_NAME: 'vb_token'
+};
 
-// Mock the accounts model
-jest.mock('../../src/models/accounts.js', () => {
-  const mockFindRowByEmail = jest.fn();
-  const mockFindRowById = jest.fn();
-  const mockToPublic = jest.fn();
-  const mockCreateUserWithBusiness = jest.fn();
-  const mockSaveResetToken = jest.fn();
-  const mockFindValidResetToken = jest.fn();
-  const mockConsumeResetToken = jest.fn();
-  const mockRecentResetTokenExists = jest.fn();
-  
-  return {
-    findRowByEmail: mockFindRowByEmail,
-    findRowById: mockFindRowById,
-    toPublic: mockToPublic,
-    createUserWithBusiness: mockCreateUserWithBusiness,
-    saveResetToken: mockSaveResetToken,
-    findValidResetToken: mockFindValidResetToken,
-    consumeResetToken: mockConsumeResetToken,
-    recentResetTokenExists: mockRecentResetTokenExists
-  };
-});
-
-// Mock the security utilities
-jest.mock('../../src/utils/security.js', () => {
-  const mockHashPassword = jest.fn().mockResolvedValue('hashed_password');
-  const mockVerifyPassword = jest.fn().mockResolvedValue(true);
-  const mockSignToken = jest.fn().mockReturnValue('test_token');
-  const mockVerifyToken = jest.fn();
-  const mockSetAuthCookie = jest.fn();
-  const mockClearAuthCookie = jest.fn();
-  const mockNewResetToken = jest.fn().mockReturnValue({ raw: 'test_token_raw', hash: 'test_token_hash' });
-  const mockSha256 = jest.fn().mockReturnValue('hashed_token');
-  
-  return {
-    hashPassword: mockHashPassword,
-    verifyPassword: mockVerifyPassword,
-    signToken: mockSignToken,
-    verifyToken: mockVerifyToken,
-    setAuthCookie: mockSetAuthCookie,
-    clearAuthCookie: mockClearAuthCookie,
-    newResetToken: mockNewResetToken,
-    sha256: mockSha256,
-    DUMMY_HASH: 'dummy_hash',
-    COOKIE_NAME: 'vb_token'
-  };
-});
-
-// Mock the mailer
-jest.mock('../../src/utils/mailer.js', () => ({
+const mockMailer = {
   mailConfigured: false,
   sendInBackground: jest.fn()
-}));
+};
 
-// Mock the config
-jest.mock('../../src/config.js', () => ({
-  config: {
-    clientOrigin: 'http://localhost:5173',
-    isProd: false,
-    resetTokenTtlMinutes: 15
-  }
-}));
+// Mock modules before requiring app
+jest.mock('../../src/models/accounts.js', () => mockAccounts);
+jest.mock('../../src/utils/security.js', () => mockSecurity);
+jest.mock('../../src/utils/mailer.js', () => mockMailer);
 
-const accounts = require('../../src/models/accounts.js');
-const security = require('../../src/utils/security.js');
+// Now we can require app
+const request = require('supertest');
+const app = require('../../src/app.js');
 
 describe('Auth API Integration Tests', () => {
   beforeEach(() => {
@@ -123,16 +84,16 @@ describe('Auth API Integration Tests', () => {
         }
       };
 
-      accounts.findRowByEmail.mockReturnValue(null);
-      accounts.createUserWithBusiness.mockReturnValue(1);
-      accounts.findRowById.mockReturnValue({
+      mockAccounts.findRowByEmail.mockReturnValue(null);
+      mockAccounts.createUserWithBusiness.mockReturnValue(1);
+      mockAccounts.findRowById.mockReturnValue({
         id: 1,
         email: 'test@example.com',
         first_name: 'Test',
         last_name: 'User',
         password_hash: 'hashed_password'
       });
-      accounts.toPublic.mockReturnValue({
+      mockAccounts.toPublic.mockReturnValue({
         id: 1,
         email: 'test@example.com',
         firstName: 'Test',
@@ -147,7 +108,7 @@ describe('Auth API Integration Tests', () => {
 
       expect(res.body.message).toBe('Account created.');
       expect(res.body.user).toBeDefined();
-      expect(security.setAuthCookie).toHaveBeenCalled();
+      expect(mockSecurity.setAuthCookie).toHaveBeenCalled();
     });
 
     it('should reject duplicate email', async () => {
@@ -167,7 +128,7 @@ describe('Auth API Integration Tests', () => {
         }
       };
 
-      accounts.findRowByEmail.mockReturnValue({ id: 1 });
+      mockAccounts.findRowByEmail.mockReturnValue({ id: 1 });
 
       const res = await request(app)
         .post('/api/auth/register')
@@ -203,7 +164,7 @@ describe('Auth API Integration Tests', () => {
         password: 'ValidPass123'
       };
 
-      accounts.findRowByEmail.mockReturnValue({
+      mockAccounts.findRowByEmail.mockReturnValue({
         id: 1,
         email: 'test@example.com',
         password_hash: 'hashed_password',
@@ -211,7 +172,7 @@ describe('Auth API Integration Tests', () => {
         last_name: 'User'
       });
       
-      accounts.toPublic.mockReturnValue({
+      mockAccounts.toPublic.mockReturnValue({
         id: 1,
         email: 'test@example.com',
         firstName: 'Test',
@@ -225,7 +186,7 @@ describe('Auth API Integration Tests', () => {
 
       expect(res.body.message).toBe('Signed in.');
       expect(res.body.user).toBeDefined();
-      expect(security.setAuthCookie).toHaveBeenCalled();
+      expect(mockSecurity.setAuthCookie).toHaveBeenCalled();
     });
 
     it('should reject invalid credentials', async () => {
@@ -234,7 +195,7 @@ describe('Auth API Integration Tests', () => {
         password: 'wrongpassword'
       };
 
-      accounts.findRowByEmail.mockReturnValue(null);
+      mockAccounts.findRowByEmail.mockReturnValue(null);
 
       const res = await request(app)
         .post('/api/auth/login')
@@ -265,13 +226,13 @@ describe('Auth API Integration Tests', () => {
         email: 'test@example.com'
       };
 
-      accounts.findRowByEmail.mockReturnValue({
+      mockAccounts.findRowByEmail.mockReturnValue({
         id: 1,
         email: 'test@example.com',
         first_name: 'Test'
       });
       
-      accounts.recentResetTokenExists.mockReturnValue(false);
+      mockAccounts.recentResetTokenExists.mockReturnValue(false);
 
       const res = await request(app)
         .post('/api/auth/forgot-password')
@@ -279,7 +240,7 @@ describe('Auth API Integration Tests', () => {
         .expect(200);
 
       expect(res.body.message).toContain('reset link');
-      expect(accounts.saveResetToken).toHaveBeenCalled();
+      expect(mockAccounts.saveResetToken).toHaveBeenCalled();
     });
 
     it('should return same response for non-existent email', async () => {
@@ -287,7 +248,7 @@ describe('Auth API Integration Tests', () => {
         email: 'nonexistent@example.com'
       };
 
-      accounts.findRowByEmail.mockReturnValue(null);
+      mockAccounts.findRowByEmail.mockReturnValue(null);
 
       const res = await request(app)
         .post('/api/auth/forgot-password')
@@ -295,7 +256,7 @@ describe('Auth API Integration Tests', () => {
         .expect(200);
 
       expect(res.body.message).toContain('reset link');
-      expect(accounts.saveResetToken).not.toHaveBeenCalled();
+      expect(mockAccounts.saveResetToken).not.toHaveBeenCalled();
     });
 
     it('should reject invalid email', async () => {
@@ -314,43 +275,31 @@ describe('Auth API Integration Tests', () => {
 
   describe('POST /api/auth/verify-reset-token', () => {
     it('should verify valid reset token', async () => {
-      const verifyData = {
-        token: 'valid_token_raw'
-      };
-
-      accounts.findValidResetToken.mockReturnValue({ id: 1, user_id: 1 });
+      mockAccounts.findValidResetToken.mockReturnValue({ id: 1, user_id: 1 });
 
       const res = await request(app)
         .post('/api/auth/verify-reset-token')
-        .send(verifyData)
+        .send({ token: 'a'.repeat(64) })
         .expect(200);
 
       expect(res.body.valid).toBe(true);
     });
 
     it('should reject invalid reset token', async () => {
-      const verifyData = {
-        token: 'invalid_token'
-      };
-
-      accounts.findValidResetToken.mockReturnValue(null);
+      mockAccounts.findValidResetToken.mockReturnValue(null);
 
       const res = await request(app)
         .post('/api/auth/verify-reset-token')
-        .send(verifyData)
+        .send({ token: 'a'.repeat(64) })
         .expect(200);
 
       expect(res.body.valid).toBe(false);
     });
 
     it('should reject invalid token format', async () => {
-      const invalidData = {
-        token: 'invalid'
-      };
-
       const res = await request(app)
         .post('/api/auth/verify-reset-token')
-        .send(invalidData)
+        .send({ token: 'invalid' })
         .expect(400);
 
       expect(res.body.errors).toBeDefined();
@@ -359,14 +308,8 @@ describe('Auth API Integration Tests', () => {
 
   describe('POST /api/auth/reset-password', () => {
     it('should reset password with valid token', async () => {
-      const resetData = {
-        token: 'valid_token_raw',
-        password: 'NewValidPass123',
-        confirmPassword: 'NewValidPass123'
-      };
-
-      accounts.findValidResetToken.mockReturnValue({ id: 1, user_id: 1 });
-      accounts.findRowById.mockReturnValue({
+      mockAccounts.findValidResetToken.mockReturnValue({ id: 1, user_id: 1 });
+      mockAccounts.findRowById.mockReturnValue({
         id: 1,
         email: 'test@example.com',
         first_name: 'Test'
@@ -374,42 +317,42 @@ describe('Auth API Integration Tests', () => {
 
       const res = await request(app)
         .post('/api/auth/reset-password')
-        .send(resetData)
+        .send({
+          token: 'a'.repeat(64),
+          password: 'NewValidPass123',
+          confirmPassword: 'NewValidPass123'
+        })
         .expect(200);
 
       expect(res.body.message).toBe('Password updated. You can now sign in.');
-      expect(accounts.consumeResetToken).toHaveBeenCalled();
+      expect(mockAccounts.consumeResetToken).toHaveBeenCalled();
     });
 
     it('should reject invalid token', async () => {
-      const resetData = {
-        token: 'invalid_token_raw',
-        password: 'NewValidPass123',
-        confirmPassword: 'NewValidPass123'
-      };
-
-      accounts.findValidResetToken.mockReturnValue(null);
+      mockAccounts.findValidResetToken.mockReturnValue(null);
 
       const res = await request(app)
         .post('/api/auth/reset-password')
-        .send(resetData)
+        .send({
+          token: 'a'.repeat(64),
+          password: 'NewValidPass123',
+          confirmPassword: 'NewValidPass123'
+        })
         .expect(400);
 
       expect(res.body.message).toContain('invalid or has expired');
     });
 
     it('should reject invalid password', async () => {
-      const resetData = {
-        token: 'valid_token_raw',
-        password: 'short',
-        confirmPassword: 'short'
-      };
-
-      accounts.findValidResetToken.mockReturnValue({ id: 1, user_id: 1 });
+      mockAccounts.findValidResetToken.mockReturnValue({ id: 1, user_id: 1 });
 
       const res = await request(app)
         .post('/api/auth/reset-password')
-        .send(resetData)
+        .send({
+          token: 'a'.repeat(64),
+          password: 'short',
+          confirmPassword: 'short'
+        })
         .expect(400);
 
       expect(res.body.errors).toBeDefined();
@@ -423,7 +366,7 @@ describe('Auth API Integration Tests', () => {
         .expect(200);
 
       expect(res.body.message).toBe('Signed out.');
-      expect(security.clearAuthCookie).toHaveBeenCalled();
+      expect(mockSecurity.clearAuthCookie).toHaveBeenCalled();
     });
   });
 
@@ -433,7 +376,7 @@ describe('Auth API Integration Tests', () => {
         .get('/api/auth/profile')
         .expect(401);
 
-      expect(res.body.message).toBe('Authentication required');
+      expect(res.body.message).toBe('Please sign in to continue.');
     });
   });
 });

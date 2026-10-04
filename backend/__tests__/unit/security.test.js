@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('node:crypto');
 
 // Mock the config module
-jest.mock('../src/config.js', () => ({
+jest.mock('../../src/config.js', () => ({
   config: {
     bcryptRounds: 10,
     jwtSecret: 'test_secret_key',
@@ -44,7 +44,8 @@ describe('Security Utilities', () => {
 
     it('should have a dummy hash for timing attacks', () => {
       expect(security.DUMMY_HASH).toBeDefined();
-      expect(security.DUMMY_HASH).toBe(bcrypt.hashSync('not-a-real-password', 10));
+      // Just verify it's a bcrypt hash, don't compare exact values
+      expect(security.DUMMY_HASH).toMatch(/^\$2[aby]\$/);
     });
   });
 

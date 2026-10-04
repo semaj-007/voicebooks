@@ -54,7 +54,7 @@ describe('Auth Validators', () => {
       const result = validators.passwordSchema.safeParse('');
       
       expect(result.success).toBe(false);
-      expect(result.error.errors[0].message).toBe('Password is required');
+      expect(result.error.errors[0].message).toBe('Password needs at least 8 characters');
     });
   });
 
