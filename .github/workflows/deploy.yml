@@ -11,7 +11,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [24.x]
     
     steps:
       - name: Checkout repository
@@ -27,13 +27,13 @@ jobs:
         working-directory: backend
         run: |
           npm ci
-          npm test
+          npm run test:coverage
       
       - name: Install and test frontend
         working-directory: frontend
         run: |
           npm ci
-          npm test
+          npm run test:coverage
 
   deploy-backend:
     name: Deploy Backend
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: 'npm'
       
       - name: Install dependencies
@@ -79,7 +79,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: 'npm'
       
       - name: Install dependencies

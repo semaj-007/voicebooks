@@ -17,7 +17,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [24.x]
     
     steps:
       - name: Checkout repository
@@ -34,9 +34,9 @@ jobs:
         working-directory: backend
         run: npm ci
         
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: backend
-        run: npm test
+        run: npm run test:coverage
         
       - name: Upload test coverage
         uses: actions/upload-artifact@v4
