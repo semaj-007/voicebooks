@@ -27,12 +27,14 @@ jobs:
         working-directory: backend
         run: |
           npm ci
+          if [ ! -f package-lock.json ]; then exit 1; fi
           npm run test:coverage
       
       - name: Install and test frontend
         working-directory: frontend
         run: |
           npm ci
+          if [ ! -f package-lock.json ]; then exit 1; fi
           npm run test:coverage
 
   deploy-backend:
@@ -52,7 +54,9 @@ jobs:
       
       - name: Install dependencies
         working-directory: backend
-        run: npm ci --production
+        run: |
+          npm ci --production
+          if [ ! -f package-lock.json ]; then exit 1; fi
         
       - name: Deploy to production
         working-directory: backend
@@ -84,7 +88,9 @@ jobs:
       
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: |
+          npm ci
+          if [ ! -f package-lock.json ]; then exit 1; fi
         
       - name: Build frontend
         working-directory: frontend
